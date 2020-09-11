@@ -42,6 +42,8 @@ function mlogit(alpha, X, y, Z)
         return loglike
     end
 
+K = size(X,2)
+ J = length(unique(y))
 x0 = rand(K*(J-1)+1)
 
 multinom_please_work = optimize(b -> mlogit(b, X, y, Z), x0, LBFGS(), 
@@ -67,20 +69,31 @@ function nestlogit(alpha, X, y, Z)
             bigY[:,j] = y.==j
         end
 		bigAlpha = [reshape(alpha[1:(K*2)],K,2) zeros(K)]
-		
+		firstnest = zeros(N, 3)
+		secondnest = zeros(N, 4)
 		num = zeros(N,J)
         dem = zeros(N)
+		secondterm = zeros(N, J)
+		m = zeros(N)
+		n = zeros(N)
 		for j=1:J
 			if j <= 3
-				num[:,j] = exp.(((X*bigAlpha[:,1] .+ (Z[:,j] .- Z[:,J])*gamma)./lambda[1])).^(lambda[1])
-			elseif j >= 4 & j <= 7
-				num[:,j] = exp.(((X*bigAlpha[:,2] .+ (Z[:,j] .- Z[:,J])*gamma)./lambda[2])).^(lambda[2])
+				num[:,j] = exp.(((X*bigAlpha[:,1] .+ (Z[:,j] .- Z[:,J])*gamma)./lambda[1]))
+				firstnest[:,j] =  exp.(((X*bigAlpha[:,1] .+ (Z[:,j] .- Z[:,J])*gamma)./lambda[1]))
+			elseif (j >= 4 && j <= 7)
+				num[:,j] = exp.(((X*bigAlpha[:,2] .+ (Z[:,j] .- Z[:,J])*gamma)./lambda[2]))
+				secondnest[:,(j-3)] = exp.(((X*bigAlpha[:,2] .+ (Z[:,j] .- Z[:,J])*gamma)./lambda[2]))
 			else 
-				num[:,j] = 1
+				num[:,j] .= 1
 			end
-			dem .+= num[:,j]
         end
-        
+        m = sum(firstnest, dims=2)
+		n = sum(secondnest, dims=2)
+		secondterm[:, 1:3] .= (m).^(lambda[1]-1)
+		secondterm[:, 4:7] .= (n).^(lambda[2]-1)
+		secondterm[:, 8] .= 1
+		num = num.*secondterm
+		dem = 1 .+ m + n
         P = num./repeat(dem,1,J)
 
         loglike = -sum(bigY.*log.(P) )
