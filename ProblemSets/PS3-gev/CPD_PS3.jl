@@ -93,7 +93,7 @@ function nestlogit(alpha, X, y, Z)
 		secondterm[:, 4:7] .= (n).^(lambda[2]-1)
 		secondterm[:, 8] .= 1
 		num = num.*secondterm
-		dem = 1 .+ m + n
+		dem = 1 .+ (m).^(lambda[1]) + n.^(lambda[2])
         P = num./repeat(dem,1,J)
 
         loglike = -sum(bigY.*log.(P) )
