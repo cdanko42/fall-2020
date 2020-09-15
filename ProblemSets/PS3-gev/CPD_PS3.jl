@@ -53,7 +53,7 @@ println(multinom_please_work)
 x0
 
 ## Question 2
-## For a unit change in elenwage, the probability of the outcome j will change by .8356
+## For a unit change in elenwage, the utility will change with respect to gamma. Since this is a log, gamma/100 should give us the change in utility
 ## So as wage increases, the probabilty of taking that job increases, which makes perfect sense
 
 function nestlogit(alpha, X, y, Z)
