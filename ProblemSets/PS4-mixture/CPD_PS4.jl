@@ -109,7 +109,7 @@ function mlogit_with_Z_quad(theta, X, Z, y)
         
         alpha = theta[1:end-2]
         gamma = theta[end-1]
-		gammavar =theta[end]
+		gammavar =exp(theta[end])
         
 		K = size(X,2)
         J = length(unique(y))
@@ -136,14 +136,14 @@ function mlogit_with_Z_quad(theta, X, Z, y)
 			B = B.*P[,j]
 		end
 		
-		nodes, weights = lgwt(7, -4*gamma, 4*gamma)
+		nodes, weights = lgwt(7, -4*gammavar, 4*gammavar)
 		d = Normal(gamma,gammavar)
 		t = zeros(N, R)
 		for r=1:R
 			t[:,r] = df.year .= Time[r]
 			t[:,r] = t[:,r].*B
 			for n=1:N
-				t[n,r] =  sum(weights.*t[n,r].*pdf.(d,nodes))
+				t[n,r] =  sum(weights[r].*t[n,r].*pdf.(d,nodes[r]))
 			end
 		end
         t .= log.(t)

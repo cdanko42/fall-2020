@@ -8,6 +8,7 @@ using Statistics
 using DataFrames
 using CSV
 
+function ps5()
 ## Question 1
 url = "https://raw.githubusercontent.com/OU-PhD-Econometrics/fall-2020/master/ProblemSets/PS5-ddc/busdataBeta0.csv"
 df = CSV.read(HTTP.get(url).body)
@@ -41,3 +42,55 @@ sort!(df_long,[:bus_id,:time])
 ## Estimate using GLM
 myopic = glm(@formula(Y ~ Branded + Odometer), df_long, Binomial(), LogitLink())
 println(myopic)
+
+## Question 3
+url = "https://raw.githubusercontent.com/OU-PhD-Econometrics/fall-2020/master/ProblemSets/PS5-ddc/busdata.csv"
+df = CSV.read(HTTP.get(url).body)
+Y = df[1:20]
+Odo = df[21:40]
+Xst = df[43:62]
+
+#b)
+@views @inbounds function dynamic(theta)
+include("C:/Users/chris/Documents/fall-2020/ProblemSets/PS5-ddc/create_grids.jl")
+zval,zbin,xval,xbin,xtran= create_grids()
+FV = zeros(20301,2,21)
+beta= .9
+for t in 0:20
+for b in 1:2
+for z in 1:101
+for x in 1:201
+row = x+ (z-1)*xbin
+v = theta[0] + theta[1].*xval[x]+theta[2].*zval[z] + beta.*xtran[row,:]'*FV[(z-1)*xbin+1:z*xbin,b+1,t+1]
+condv = beta.*xtran[1+(z-1)*xbin,:]'*FV[(z-1)*xbin+1:z*xbin,b+1,t+1]
+FV[t] = beta.*log(exp(condv)+ exp(v))
+end
+end
+end
+end
+
+#d)
+loglike = 0
+for i in 1:size(Y, 1)
+for t in 1:20
+N = size(Y, 1)
+P = zeros(N, 20)
+P1 = zeros(N, 20)
+P0 = zeros(N, 20)
+rep =1+ (df.Zst[i]-1)*xbin
+notrep = Xst[i ,t] + (df.Zst[i]-1)*xbin
+P[i,t] =theta[0] + theta[1]*Xst[i,t] + theta[2]*df.Branded[i] +(xtran[rep,:].-xtran[notrep, :])'*FV[notrep:notrep+xbin-1, df.Branded[i], t+1]
+end
+end
+P1 = exp.(P)./(1 .+exp.(P))
+P0 = 1 .- P1
+loglike = log(sum(P1))+log(sum(P0))
+return loglike
+end
+
+x0 = [0,0,0]
+dynam_please_work = optimize(b -> dyanamic(b), x0, LBFGS(), 
+                        Optim.Options(g_tol=1e-5, iterations=100_000, 
+                        show_trace=true, allow_f_increases=true))
+println(dynam_please_work)
+end
