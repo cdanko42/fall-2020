@@ -59,39 +59,36 @@ zval,zbin,xval,xbin,xtran = create_grids()
 
 E = DataFrame()
 		E.Odometer = kron(ones(zbin), xval)
-		E.RouteUsage = kron(ones(xbin),zval)
-		E.Branded = zeros(size(xtran,1))
+		E.RouteUsage = kron(zval, ones(xbin))
 		E.time= zeros(size(xtran,1))
+		E.Branded = zeros(size(xtran,1))
 		
-@views @inbounds function futval(Zstate,Xstate,xtran,zbin,xbin,E)
+@views @inbounds function futval(b1, Zstate,Xstate,xtran,zbin,xbin,df2)
 		
-        FV=zeros(zbin*xbin,2,T+1)
-
-        # First loop: solve the backward recursion problem given the values of α
-        # This will give the future value for *all* possible states that we might visit
-        # This is why the FV array does not have an individual dimension
+        FV1=zeros(zbin*xbin,2,T+1)
+		FVT1 = zeros(size(Y,1), T)
         for t=2:T
             for b=0:1
-				E.time .= t
-				E.Branded .= b 
-				p0 = predict(flexlog, E)
-                FV[:, b+1, t] = - .9 .*log.(p0)
+				@with(df2, :time .= t)
+				@with(df2, :Branded .= b)
+				p0 = 1 .- convert(Array{Float64},predict(b1, E))
+                FV1[:, b+1, t] = - .9 .*log.(p0)
             end
         end
 		
-		FVT1 = zeros(size(Y,1), T)
+		
 		for i=1:size(df,1)
 		notrep = Int((Zstate[i]-1)*xbin+1)
-		for t=1:20
-		rep  = Int(Xstate[i,t] + (Zstate[i]-1)*xbin)    																		
-		FVT1[i,t] = (xtran[rep,:].-xtran[notrep,:])'*FV[notrep:notrep+xbin-1,B[i]+1, t+1]
+		for t=1:T
+		rep  = Int(Xstate[i,t] + notrep-1)    																		
+		FVT1[i,t] = (xtran[rep,:].-xtran[notrep,:])⋅FV1[notrep:notrep+xbin-1,B[i]+1,t+1]
 		end
 		end
 	mat = FVT1'[:]
 	return mat
 end	
 
-ftv1 = futval(Zstate,Xstate,xtran,zbin,xbin,E)
+ftv1 = futval(flexlog, Zstate,Xstate,xtran,zbin,xbin,E)
 df_long = @transform(df_long, fv=ftv1)
 
 theta_hat_ccp_glm = glm(@formula(Y ~ Odometer + Branded), 
