@@ -11,6 +11,7 @@ using CSV
 using FreqTables
 using Distributions
 
+function ps5()
 ## Problem 1
 url = "https://raw.githubusercontent.com/OU-PhD-Econometrics/fall-2020/master/ProblemSets/PS1-julia-intro/nlsw88.csv"
 df = CSV.read(HTTP.get(url).body)
@@ -175,6 +176,6 @@ end
 
 alpha_hat_smm = optimize(a -> gmm_smm(a, X, y, 1000), alpha_true, LBFGS(), Optim.Options(g_tol = 1e-5, iterations=100_000, show_trace=true, show_every=50))
 println(alpha_hat_smm)
-
+end
 	
 	
