@@ -106,6 +106,10 @@ println(alpha_hat_optim)
 alpha_hat_optim = optimize(a -> logit_gmm(a, X, y), alpha_rand, LBFGS(), Optim.Options(g_tol = 1e-5, iterations=100_000, show_trace=true, show_every=50))
 println(alpha_hat_optim)
 
+## Yes the function appears to be globally concave. The algorithm looks very close to the real values, we don't stry too far
+
+## Question 3
+
 Xrand = rand(1000, 2)
 betatrue = [[(.25),	(.1),(.05)] [(.05),(.25),(.4)]]
 p = Xrand*betatrue'
@@ -137,6 +141,11 @@ function gmm_smm(θ, X, y, D)
     # N+1 moments in both model and data
     gmodel = zeros(N,D)
     gdata= y
+	bigY = zeros(N,J)
+	for j=1:J
+            bigY[:,j] = y.==j
+    end
+	bigY2 = zeros(N,J)
     #### !!!!!!!!!!!!!!!!!!!!!!!!!!!!! ####
     # This is critical!                   #
     Random.seed!(1234)                    #
@@ -152,13 +161,15 @@ function gmm_smm(θ, X, y, D)
         for i in 1:N
 			Ychoice[i,1] = argmax(p[i,:] + ε[i,:])
 		end
-		gmodel[1:end,d] = Ychoice
+		for j=1:J
+            bigY2[:,j] .+= (Ychoice.==j)*(1/D)
+    end
 	end
     # criterion function
-    err = vec(gdata .- mean(gmodel; dims=2))
+    g = bigY[:] .- bigY2[:]
     # weighting matrix is the identity matrix
     # minimize weighted difference between data and moments
-    Jf = err'*I*err
+    Jf = g'*I*g
     return Jf
 end
 
